@@ -4,12 +4,13 @@ import java.io.*;
 import java.util.*;
 
 /** 
- * @author Ray Mooney
- * A simple bigram language model that uses simple fixed-weight interpolation
- * with a unigram model for smoothing.
+  * @author Xinrui Hua, Ray Mooney
+  * A simple bigram language model that uses simple fixed-weight interpolation
+  * with a unigram model for smoothing.  It's a "backward" bigram model that 
+  * models the generation of a sentence from right to left.
 */
 
-public class BigramModel {
+public class BackwardBigramModel {
 
     /** Unigram model that maps a token to its unigram probability */
     public Map<String, DoubleValue> unigramMap = null; 
@@ -28,9 +29,9 @@ public class BigramModel {
     public double lambda2 = 0.9;
 
     /** Initialize model with empty hashmaps with initial
-     *  unigram entries for setence start (<S>), sentence end (</S>)
+     *  unigram entries for sentence start (<S>), sentence end (</S>)
      *  and unknown tokens */
-    public BigramModel() {
+    public BackwardBigramModel() {
 		unigramMap = new HashMap<String, DoubleValue>();
 		bigramMap = new HashMap<String, DoubleValue>();
 		unigramMap.put("<S>", new DoubleValue());
@@ -45,20 +46,22 @@ public class BigramModel {
 		trainSentences(sentences);
 		// Compure final unigram and bigram probs from counts
 		calculateProbs();
-		}
+	}
 
-		/** Accumulate unigram and bigram counts for these sentences */
-		public void trainSentences (List<List<String>> sentences) {
+	/** Accumulate unigram and bigram counts for these sentences */
+	public void trainSentences (List<List<String>> sentences) {
 		for (List<String> sentence : sentences) {
+			Collections.reverse(sentence);
 			trainSentence(sentence);
+			Collections.reverse(sentence);
 		}
     }
 
     /** Accumulate unigram and bigram counts for this sentence */
     public void trainSentence (List<String> sentence) {
 		// First count an initial start sentence token
-		String prevToken = "<S>";
-		DoubleValue unigramValue = unigramMap.get("<S>");
+		String prevToken = "</S>";
+		DoubleValue unigramValue = unigramMap.get("</S>");
 		unigramValue.increment();
 		tokenCount++;
 		// For each token in sentence, accumulate a unigram and bigram count
@@ -90,11 +93,11 @@ public class BigramModel {
 			prevToken = token;
 		}
 		// Account for end of sentence unigram
-		unigramValue = unigramMap.get("</S>");
+		unigramValue = unigramMap.get("<S>");
 		unigramValue.increment();
 		tokenCount++;
 		// Account for end of sentence bigram
-		String bigram = bigram(prevToken, "</S>");
+		String bigram = bigram(prevToken, "<S>");
 		DoubleValue bigramValue = bigramMap.get(bigram);
 		if (bigramValue == null) {
 			bigramValue = new DoubleValue();
@@ -189,9 +192,11 @@ public class BigramModel {
 		for (List<String> sentence : sentences) {
 			// Num of tokens in sentence plus 1 for predicting </S>
 			totalNumTokens += sentence.size() + 1;
+			Collections.reverse(sentence);
 			// Compute log prob of sentence
 			double sentenceLogProb = sentenceLogProb(sentence);
 			//	    System.out.println(sentenceLogProb + " : " + sentence);
+			Collections.reverse(sentence);
 			// Add to total log prob (since add logs to multiply probs)
 			totalLogProb += sentenceLogProb;
 		}
@@ -203,7 +208,7 @@ public class BigramModel {
     /* Compute log probability of sentence given current model */
     public double sentenceLogProb (List<String> sentence) {
 		// Set start-sentence as initial token
-		String prevToken = "<S>";
+		String prevToken = "</S>";
 		// Maintain total sentence prob as sum of individual token
 		// log probs (since adding logs is same as multiplying probs)
 		double sentenceLogProb = 0;
@@ -227,11 +232,11 @@ public class BigramModel {
 			prevToken = token;
 		}
 		// Check prediction of end of sentence token
-		DoubleValue unigramVal = unigramMap.get("</S>");
-		String bigram = bigram(prevToken, "</S>");
+		DoubleValue unigramVal = unigramMap.get("<S>");
+		String bigram = bigram(prevToken, "<S>");
 		DoubleValue bigramVal = bigramMap.get(bigram);
 		double logProb = Math.log(interpolatedProb(unigramVal, bigramVal));
-		// Update sentence log prob based on prediction of </S>
+		// Update sentence log prob based on prediction of <S>
 		sentenceLogProb += logProb;
 		return sentenceLogProb;
     }
@@ -242,7 +247,9 @@ public class BigramModel {
 		double totalNumTokens = 0;
 		for (List<String> sentence : sentences) {
 			totalNumTokens += sentence.size();
+			Collections.reverse(sentence);
 			double sentenceLogProb = sentenceLogProb2(sentence);
+			Collections.reverse(sentence);
 			//	    System.out.println(sentenceLogProb + " : " + sentence);
 			totalLogProb += sentenceLogProb;
 		}
@@ -252,7 +259,7 @@ public class BigramModel {
     
     /** Like sentenceLogProb but excludes predicting end-of-sentence when computing prob */
     public double sentenceLogProb2 (List<String> sentence) {
-		String prevToken = "<S>";
+		String prevToken = "</S>";
 		double sentenceLogProb = 0;
 		for (String token : sentence) {
 			DoubleValue unigramVal = unigramMap.get(token);
@@ -273,7 +280,7 @@ public class BigramModel {
      *  including the end of sentence */
     public double[] sentenceTokenProbs (List<String> sentence) {
 		// Set start-sentence as initial token
-		String prevToken = "<S>";
+		String prevToken = "</S>";
 		// Vector for storing token prediction probs
 		double[] tokenProbs = new double[sentence.size() + 1];
 		// Token counter
@@ -293,8 +300,8 @@ public class BigramModel {
 			i++;
 		}
 		// Check prediction of end of sentence
-		DoubleValue unigramVal = unigramMap.get("</S>");
-		String bigram = bigram(prevToken, "</S>");
+		DoubleValue unigramVal = unigramMap.get("<S>");
+		String bigram = bigram(prevToken, "<S>");
 		DoubleValue bigramVal = bigramMap.get(bigram);
 		// Store end of sentence prediction prob
 		tokenProbs[i] = interpolatedProb(unigramVal, bigramVal);
@@ -320,7 +327,7 @@ public class BigramModel {
     }
 
     /** Train and test a bigram model.
-     *  Command format: "nlp.lm.BigramModel [DIR]* [TestFrac]" where DIR 
+     *  Command format: "lm.BackwardBigramModel [DIR]* [TestFrac]" where DIR 
      *  is the name of a file or directory whose LDC POS Tagged files should be 
      *  used for input data; and TestFrac is the fraction of the sentences
      *  in this data that should be used for testing, the rest for training.
@@ -349,7 +356,7 @@ public class BigramModel {
 				") \n# Test Sentences = " + testSentences.size() +
 				" (# words = " + wordCount(testSentences) + ")");
 		// Create a bigram model and train it.
-		BigramModel model = new BigramModel();
+		BackwardBigramModel model = new BackwardBigramModel();
 		System.out.println("Training...");
 		model.train(trainSentences);
 		// Test on training data using test and test2
