@@ -13,11 +13,11 @@ import java.util.*;
 public class BidirectionalBigramModel {
 
     /** Unigram model that maps a token to its unigram probability */
-    public Map<String, DoubleValue> unigramMap = null; 
+    public BigramModel bigramModel = null; 
 
     /**  Bigram model that maps a bigram as a string "A\nB" to the
      *   P(B | A) */
-    public Map<String, DoubleValue> bigramMap = null;
+    public BackwardBigramModel backwardBigramModel = null;
 
     /** Total count of tokens in training data */
     public double tokenCount = 0;
@@ -32,115 +32,15 @@ public class BidirectionalBigramModel {
      *  unigram entries for sentence start (<S>), sentence end (</S>)
      *  and unknown tokens */
     public BidirectionalBigramModel() {
-		unigramMap = new HashMap<String, DoubleValue>();
-		bigramMap = new HashMap<String, DoubleValue>();
-		unigramMap.put("<S>", new DoubleValue());
-		unigramMap.put("</S>", new DoubleValue());
-		unigramMap.put("<UNK>", new DoubleValue());
+		bigramModel = new BigramModel();
+		backwardBigramModel = new BackwardBigramModel();
     }
 
     /** Train the model on a List of sentences represented as
      *  Lists of String tokens */
     public void train (List<List<String>> sentences) {
-		// Accumulate unigram and bigram counts in maps
-		trainSentences(sentences);
-		// Compure final unigram and bigram probs from counts
-		calculateProbs();
-	}
-
-	/** Accumulate unigram and bigram counts for these sentences */
-	public void trainSentences (List<List<String>> sentences) {
-		for (List<String> sentence : sentences) {
-			Collections.reverse(sentence);
-			trainSentence(sentence);
-			Collections.reverse(sentence);
-		}
-    }
-
-    /** Accumulate unigram and bigram counts for this sentence */
-    public void trainSentence (List<String> sentence) {
-		// First count an initial start sentence token
-		String prevToken = "</S>";
-		DoubleValue unigramValue = unigramMap.get("</S>");
-		unigramValue.increment();
-		tokenCount++;
-		// For each token in sentence, accumulate a unigram and bigram count
-		for (String token : sentence) {
-			unigramValue = unigramMap.get(token);
-			// If this is the first time token is seen then count it
-			// as an unkown token (<UNK>) to handle out-of-vocabulary 
-			// items in testing
-			if (unigramValue == null) {
-			// Store token in unigram map with 0 count to indicate that
-			// token has been seen but not counted
-			unigramMap.put(token, new DoubleValue());
-			token = "<UNK>";
-			unigramValue = unigramMap.get(token);
-			}
-			unigramValue.increment();    // Count unigram
-			tokenCount++;               // Count token
-			// Make bigram string 
-			String bigram = bigram(prevToken, token);
-			DoubleValue bigramValue = bigramMap.get(bigram);
-			if (bigramValue == null) {
-			// If previously unseen bigram, then
-			// initialize it with a value
-			bigramValue = new DoubleValue();
-			bigramMap.put(bigram, bigramValue);
-			}
-			// Count bigram
-			bigramValue.increment();
-			prevToken = token;
-		}
-		// Account for end of sentence unigram
-		unigramValue = unigramMap.get("<S>");
-		unigramValue.increment();
-		tokenCount++;
-		// Account for end of sentence bigram
-		String bigram = bigram(prevToken, "<S>");
-		DoubleValue bigramValue = bigramMap.get(bigram);
-		if (bigramValue == null) {
-			bigramValue = new DoubleValue();
-			bigramMap.put(bigram, bigramValue);
-		}
-		bigramValue.increment();
-    }
-
-    /** Compute unigram and bigram probabilities from unigram and bigram counts */
-    public void calculateProbs() {
-		// Set bigram values to conditional probability of second token given first
-		for (Map.Entry<String, DoubleValue> entry : bigramMap.entrySet()) {
-			// An entry in the HashMap maps a token to a DoubleValue
-			String bigram = entry.getKey();
-			// The value for the token is in the value of the DoubleValue
-			DoubleValue value = entry.getValue();
-			double bigramCount = value.getValue();
-			String token1 = bigramToken1(bigram); // Get first token of bigram
-			// Prob is ratio of bigram count to token1 unigram count
-			double condProb = bigramCount / unigramMap.get(token1).getValue();
-			// Set map value to conditional probability 
-			value.setValue(condProb);
-		}
-		// Store unigrams with zero count to remove from map
-		List<String> zeroTokens = new ArrayList<String>();
-		// Set unigram values to unigram probability
-		for (Map.Entry<String, DoubleValue> entry : unigramMap.entrySet()) {
-			// An entry in the HashMap maps a token to a DoubleValue
-			String token = entry.getKey();
-			// Uniggram count is the current map value
-			DoubleValue value = entry.getValue();
-			double count = value.getValue();
-			if (count == 0) 
-			// If count is zero (due to first encounter as <UNK>)
-			// then remove save it to remove from map
-			zeroTokens.add(token);
-			else
-			// Set map value to prob of unigram
-			value.setValue(count / tokenCount);
-		}
-		// Remove zero count unigrams from map
-		for (String token : zeroTokens) 
-			unigramMap.remove(token);
+		bigramModel.train(sentences);
+		backwardBigramModel.train(sentences);
 	}
 
     /** Return bigram string as two tokens separated by a newline */
