@@ -1,3 +1,4 @@
+java -cp ./ lm.BigramModel /projects/nlp/penn-treebank3/tagged/pos/atis/ 0.1 >> BigramModel-trace.txt
 # Train Sentences = 519 (# words = 3922) 
 # Test Sentences = 58 (# words = 431)
 Training...
@@ -6,6 +7,7 @@ Word Perplexity = 10.5919539986291
 Testing...
 Perplexity = 19.341388622483773
 Word Perplexity = 24.053999598153656
+java -cp ./ lm.BigramModel /projects/nlp/penn-treebank3/tagged/pos/wsj/ 0.1 >> BigramModel-trace.txt
 # Train Sentences = 43820 (# words = 995626) 
 # Test Sentences = 4869 (# words = 111718)
 Training...
@@ -14,6 +16,7 @@ Word Perplexity = 88.89008380713945
 Testing...
 Perplexity = 219.71517777445175
 Word Perplexity = 275.1178149885602
+java -cp ./ lm.BigramModel /projects/nlp/penn-treebank3/tagged/pos/brown/ 0.1 >> BigramModel-trace.txt
 # Train Sentences = 47207 (# words = 1079440) 
 # Test Sentences = 5245 (# words = 93530)
 Training...
