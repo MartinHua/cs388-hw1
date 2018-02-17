@@ -80,7 +80,7 @@ public class BidirectionalBigramModel {
 		double[] bigramTokenProbs = bigramModel.sentenceTokenProbs(sentence);
 		double[] backwardBigramTokenProbs = backwardBigramModel.sentenceTokenProbs(sentence);
 		for (int i = 0; i < sentence.size(); i++) {
-			double logProb = Math.log(interpolatedProb(bigramTokenProbs[i], backwardBigramTokenProbs[backwardBigramTokenProbs.size()-i-1]));
+			double logProb = Math.log(interpolatedProb(bigramTokenProbs[i], backwardBigramTokenProbs[sentence.size()-i-1]));
 			sentenceLogProb += logProb;
 		}
 		return sentenceLogProb;
