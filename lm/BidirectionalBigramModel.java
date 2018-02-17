@@ -86,9 +86,9 @@ public class BidirectionalBigramModel {
 		return sentenceLogProb;
     }
 	
-	public double interpolatedProb(DoubleValue bigramVal, DoubleValue backwardBigramVal) {
+	public double interpolatedProb(Double bigramVal, Double backwardBigramVal) {
 		// Linearly combine weighted bigram and backwardBigram probs
-		return lambda1 * bigramVal.getValue() + lambda2 * backwardBigramVal.getValue();
+		return lambda1 * bigramVal + lambda2 * backwardBigramVal;
     }
 
     public static int wordCount (List<List<String>> sentences) {
