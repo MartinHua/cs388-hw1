@@ -279,6 +279,7 @@ public class BackwardBigramModel {
     /** Returns vector of probabilities of predicting each token in the sentence
      *  including the end of sentence */
     public double[] sentenceTokenProbs (List<String> sentence) {
+		Collections.reverse(sentence);
 		// Set start-sentence as initial token
 		String prevToken = "</S>";
 		// Vector for storing token prediction probs
@@ -305,6 +306,7 @@ public class BackwardBigramModel {
 		DoubleValue bigramVal = bigramMap.get(bigram);
 		// Store end of sentence prediction prob
 		tokenProbs[i] = interpolatedProb(unigramVal, bigramVal);
+		Collections.reverse(sentence);
 		return tokenProbs;
     }
 

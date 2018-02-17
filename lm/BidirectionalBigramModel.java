@@ -60,26 +60,6 @@ public class BidirectionalBigramModel {
 		return bigram.substring(newlinePos + 1, bigram.length());
     }
 
-    /** Print model as lists of unigram and bigram probabilities */
-    public void print() {
-		System.out.println("Unigram probs:");
-		for (Map.Entry<String, DoubleValue> entry : unigramMap.entrySet()) {
-			// An entry in the HashMap maps a token to a DoubleValue
-			String token = entry.getKey();
-			// The value for the token is in the value of the DoubleValue
-			DoubleValue value = entry.getValue();
-			System.out.println(token + " : " + value.getValue());
-		}
-		System.out.println("\nBigram probs:");
-		for (Map.Entry<String, DoubleValue> entry : bigramMap.entrySet()) {
-			// An entry in the HashMap maps a token to a DoubleValue
-			String bigram = entry.getKey();
-			// The value for the token is in the value of the DoubleValue
-			DoubleValue value = entry.getValue();
-			System.out.println(bigramToken2(bigram) + " given " + bigramToken1(bigram) + 
-					" : " + value.getValue());
-		}
-	}
 
     /** Like test1 but excludes predicting end-of-sentence when computing perplexity */
     public void test2 (List<List<String>> sentences) {
@@ -97,8 +77,8 @@ public class BidirectionalBigramModel {
     /** Like sentenceLogProb but excludes predicting end-of-sentence when computing prob */
     public double sentenceLogProb2 (List<String> sentence) {
 		double sentenceLogProb = 0;
-		bigramTokenProbs = bigramModel.sentenceTokenProbs(sentence);
-		backwardBigramTokenProbs = backwardBigramModel.sentenceTokenProbs(sentence);
+		double[] bigramTokenProbs = bigramModel.sentenceTokenProbs(sentence);
+		double[] backwardBigramTokenProbs = backwardBigramModel.sentenceTokenProbs(sentence);
 		for (int i = 0; i < sentence.size(); i++) {
 			double logProb = Math.log(interpolatedProb(bigramTokenProbs[i], backwardBigramTokenProbs[backwardBigramTokenProbs.size()-i-1]));
 			sentenceLogProb += logProb;
