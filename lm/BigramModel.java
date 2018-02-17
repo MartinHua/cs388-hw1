@@ -257,8 +257,8 @@ public class BigramModel {
 		for (String token : sentence) {
 			DoubleValue unigramVal = unigramMap.get(token);
 			if (unigramVal == null) {
-			token = "<UNK>";
-			unigramVal = unigramMap.get(token);
+				token = "<UNK>";
+				unigramVal = unigramMap.get(token);
 			}
 			String bigram = bigram(prevToken, token);
 			DoubleValue bigramVal = bigramMap.get(bigram);
@@ -282,8 +282,8 @@ public class BigramModel {
 		for (String token : sentence) {
 			DoubleValue unigramVal = unigramMap.get(token);
 			if (unigramVal == null) {
-			token = "<UNK>";
-			unigramVal = unigramMap.get(token);
+				token = "<UNK>";
+				unigramVal = unigramMap.get(token);
 			}
 			String bigram = bigram(prevToken, token);
 			DoubleValue bigramVal = bigramMap.get(bigram);

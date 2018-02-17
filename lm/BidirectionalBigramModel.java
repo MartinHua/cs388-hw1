@@ -21,19 +21,19 @@ public class BidirectionalBigramModel {
 
     /** Total count of tokens in training data */
     public double tokenCount = 0;
-
-    /** Interpolation weight for unigram model */
-    public double lambda1 = 0.1;
-
-    /** Interpolation weight for bigram model */
-    public double lambda2 = 0.9;
+	
+	/** Interpolation weight for bigram model */
+	public double lambda1 = 0.5;
+	
+	/** Interpolation weight for backwardBigram model */
+    public double lambda2 = 0.5;
 
     /** Initialize model with empty hashmaps with initial
      *  unigram entries for sentence start (<S>), sentence end (</S>)
      *  and unknown tokens */
     public BidirectionalBigramModel() {
-		bigramModel = new BigramModel();
-		backwardBigramModel = new BackwardBigramModel();
+		  bigramModel = new BigramModel();
+		  backwardBigramModel = new BackwardBigramModel();
     }
 
     /** Train the model on a List of sentences represented as
@@ -81,76 +81,13 @@ public class BidirectionalBigramModel {
 		}
 	}
 
-    /** Use sentences as a test set to evaluate the model. Print out perplexity
-     *  of the model for this test data */
-    public void test (List<List<String>> sentences) {
-		// Compute log probability of sentence to avoid underflow
-		double totalLogProb = 0;
-		// Keep count of total number of tokens predicted
-		double totalNumTokens = 0;
-		// Accumulate log prob of all test sentences
-		for (List<String> sentence : sentences) {
-			// Num of tokens in sentence plus 1 for predicting </S>
-			totalNumTokens += sentence.size() + 1;
-			Collections.reverse(sentence);
-			// Compute log prob of sentence
-			double sentenceLogProb = sentenceLogProb(sentence);
-			//	    System.out.println(sentenceLogProb + " : " + sentence);
-			Collections.reverse(sentence);
-			// Add to total log prob (since add logs to multiply probs)
-			totalLogProb += sentenceLogProb;
-		}
-		// Given log prob compute perplexity
-		double perplexity = Math.exp(-totalLogProb / totalNumTokens);
-		System.out.println("Perplexity = " + perplexity );
-    }
-    
-    /* Compute log probability of sentence given current model */
-    public double sentenceLogProb (List<String> sentence) {
-		// Set start-sentence as initial token
-		String prevToken = "</S>";
-		// Maintain total sentence prob as sum of individual token
-		// log probs (since adding logs is same as multiplying probs)
-		double sentenceLogProb = 0;
-		// Check prediction of each token in sentence
-		for (String token : sentence) {
-			// Retrieve unigram prob
-			DoubleValue unigramVal = unigramMap.get(token);
-			if (unigramVal == null) {
-			// If token not in unigram model, treat as <UNK> token
-			token = "<UNK>";
-			unigramVal = unigramMap.get(token);
-			}
-			// Get bigram prob
-			String bigram = bigram(prevToken, token);
-			DoubleValue bigramVal = bigramMap.get(bigram);
-			// Compute log prob of token using interpolated prob of unigram and bigram
-			double logProb = Math.log(interpolatedProb(unigramVal, bigramVal));
-			// Add token log prob to sentence log prob
-			sentenceLogProb += logProb;
-			// update previous token and move to next token
-			prevToken = token;
-		}
-		// Check prediction of end of sentence token
-		DoubleValue unigramVal = unigramMap.get("<S>");
-		String bigram = bigram(prevToken, "<S>");
-		DoubleValue bigramVal = bigramMap.get(bigram);
-		double logProb = Math.log(interpolatedProb(unigramVal, bigramVal));
-		// Update sentence log prob based on prediction of <S>
-		sentenceLogProb += logProb;
-		return sentenceLogProb;
-    }
-
     /** Like test1 but excludes predicting end-of-sentence when computing perplexity */
     public void test2 (List<List<String>> sentences) {
 		double totalLogProb = 0;
 		double totalNumTokens = 0;
 		for (List<String> sentence : sentences) {
 			totalNumTokens += sentence.size();
-			Collections.reverse(sentence);
 			double sentenceLogProb = sentenceLogProb2(sentence);
-			Collections.reverse(sentence);
-			//	    System.out.println(sentenceLogProb + " : " + sentence);
 			totalLogProb += sentenceLogProb;
 		}
 		double perplexity = Math.exp(-totalLogProb / totalNumTokens);
@@ -159,63 +96,19 @@ public class BidirectionalBigramModel {
     
     /** Like sentenceLogProb but excludes predicting end-of-sentence when computing prob */
     public double sentenceLogProb2 (List<String> sentence) {
-		String prevToken = "</S>";
 		double sentenceLogProb = 0;
-		for (String token : sentence) {
-			DoubleValue unigramVal = unigramMap.get(token);
-			if (unigramVal == null) {
-			token = "<UNK>";
-			unigramVal = unigramMap.get(token);
-			}
-			String bigram = bigram(prevToken, token);
-			DoubleValue bigramVal = bigramMap.get(bigram);
-			double logProb = Math.log(interpolatedProb(unigramVal, bigramVal));
+		bigramTokenProbs = bigramModel.sentenceTokenProbs(sentence);
+		backwardBigramTokenProbs = backwardBigramModel.sentenceTokenProbs(sentence);
+		for (int i = 0; i < sentence.size(); i++) {
+			double logProb = Math.log(interpolatedProb(bigramTokenProbs[i], backwardBigramTokenProbs[backwardBigramTokenProbs.size()-i-1]));
 			sentenceLogProb += logProb;
-			prevToken = token;
 		}
 		return sentenceLogProb;
     }
-
-    /** Returns vector of probabilities of predicting each token in the sentence
-     *  including the end of sentence */
-    public double[] sentenceTokenProbs (List<String> sentence) {
-		// Set start-sentence as initial token
-		String prevToken = "</S>";
-		// Vector for storing token prediction probs
-		double[] tokenProbs = new double[sentence.size() + 1];
-		// Token counter
-		int i = 0;
-		// Compute prob of predicting each token in sentence
-		for (String token : sentence) {
-			DoubleValue unigramVal = unigramMap.get(token);
-			if (unigramVal == null) {
-			token = "<UNK>";
-			unigramVal = unigramMap.get(token);
-			}
-			String bigram = bigram(prevToken, token);
-			DoubleValue bigramVal = bigramMap.get(bigram);
-			// Store prediction prob for i'th token
-			tokenProbs[i] = interpolatedProb(unigramVal, bigramVal);
-			prevToken = token;
-			i++;
-		}
-		// Check prediction of end of sentence
-		DoubleValue unigramVal = unigramMap.get("<S>");
-		String bigram = bigram(prevToken, "<S>");
-		DoubleValue bigramVal = bigramMap.get(bigram);
-		// Store end of sentence prediction prob
-		tokenProbs[i] = interpolatedProb(unigramVal, bigramVal);
-		return tokenProbs;
-    }
-
-    /** Interpolate bigram prob using bigram and unigram model predictions */	 
-    public double interpolatedProb(DoubleValue unigramVal, DoubleValue bigramVal) {
-		double bigramProb = 0;
-		// In bigram unknown then its prob is zero
-		if (bigramVal != null)
-			bigramProb = bigramVal.getValue();
-		// Linearly combine weighted unigram and bigram probs
-		return lambda1 * unigramVal.getValue() + lambda2 * bigramProb;
+	
+	public double interpolatedProb(DoubleValue bigramVal, DoubleValue backwardBigramVal) {
+		// Linearly combine weighted bigram and backwardBigram probs
+		return lambda1 * bigramVal.getValue() + lambda2 * backwardBigramVal.getValue();
     }
 
     public static int wordCount (List<List<String>> sentences) {
@@ -259,12 +152,10 @@ public class BidirectionalBigramModel {
 		BidirectionalBigramModel model = new BidirectionalBigramModel();
 		System.out.println("Training...");
 		model.train(trainSentences);
-		// Test on training data using test and test2
-		model.test(trainSentences);
+		// Test on training data using test2
 		model.test2(trainSentences);
 		System.out.println("Testing...");
-		// Test on test data using test and test2
-		model.test(testSentences);
+		// Test on test data using test2
 		model.test2(testSentences);
     }
 
